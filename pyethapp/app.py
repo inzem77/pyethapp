@@ -107,8 +107,20 @@ def app(ctx, profile, alt_config, config_values, data_dir, log_config, bootstrap
             # check if this is part of the default config
             if config_value.startswith("eth.genesis"):
                 del config['eth']['genesis_hash']
+        except KeyError:
+            try:
+                config_value = click.prompt('Unknown config option. Please input correct option: '
+                                            '{}'.format(config_value.split('=')[0]), default='')
+                konfig.set_config_param(config, config_value)
+            except:
+                raise BadParameter("Unknown config option {}. Exit....".format(config_value))
         except ValueError:
-            raise BadParameter('Config parameter must be of the form "a.b.c=d" where "a.b.c" '
+            try:
+                config_value = click.prompt('Please input correct value. ValueError: '
+                                            '{}'.format(config_value), default='')
+                konfig.set_config_param(config, config_value)
+            except:
+                raise BadParameter('Config parameter must be of the form "a.b.c=d" where "a.b.c" '
                                'specifies the parameter to set and d is a valid yaml value '
                                '(example: "-c jsonrpc.port=5000")')
 
@@ -317,11 +329,15 @@ def export_blocks(ctx, from_, to, file):
     if to is None:
         to = head_number
     if from_ < 0:
-        log.fatal('block numbers must not be negative')
-        sys.exit(1)
+        from_ = click.prompt('block numbers must not be negative', default=0)
+        if from_ < 0:
+            log.fatal('block numbers must not be negative')
+            sys.exit(1)
     if to < from_:
-        log.fatal('"to" block must be newer than "from" block')
-        sys.exit(1)
+        to = click.prompt('"to={}" block must be newer than "from={}" block'.format(to, from_), default=0)
+        if to < from_:
+            log.fatal('"to={}" block must be newer than "from={}" block'.format(to, from_))
+            sys.exit(1)
     if to > head_number:
         log.fatal('"to" block not known (current head: {})'.format(head_number))
         sys.exit(1)
